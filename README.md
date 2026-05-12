@@ -36,7 +36,7 @@ The reinforcement learning stage (Stage 3) in this project is built on top of VE
 
 ## Dataset
 
-The datasets can be accessed via this [link](https://drive.google.com/file/d/1S92QvaEs7aAhCwWOUovyb4y5P-pXwUhH/view?usp=sharing). Please download the dataset and ensure the dataset folder is placed under directory ./data/Amazon .
+The datasets can be accessed via this [link](https://drive.google.com/file/d/1etg1e8oStGOjsg1Vr15vFnjlTMUx4Htz/view?usp=sharing). Please download the dataset and ensure the dataset folder is placed under directory ./data/Amazon .
 
 ## Training
 
