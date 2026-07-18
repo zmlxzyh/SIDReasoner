@@ -17,3 +17,8 @@ logs/*
 data_backup/*
 data/*
 rq/*
+
+.DS_Store
+**/.DS_Store
+
+mimic-dataset/
