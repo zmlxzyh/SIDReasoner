@@ -1,0 +1,22 @@
+{
+  "authoritative_history_fields": [
+    "history_disease_id_visits",
+    "history_disease_text_visits",
+    "history_sid_visits"
+  ],
+  "code_level_counts": {
+    "test": 26161,
+    "train": 93616,
+    "valid": 12448
+  },
+  "disease_count": 4491,
+  "identity_fields_written": false,
+  "index_sha256": "0436d91db24aabca4dc43e0bd8f8f0aa9f946ea4bc2d3f60a047cf909d9053b7",
+  "item_sha256": "6116db1b39e309d8a97736d1b48e138488b290b5206039ec7c4d64d8ca29602d",
+  "list_encoding": "JSON",
+  "visit_counts": {
+    "test": 1714,
+    "train": 6141,
+    "valid": 837
+  }
+}

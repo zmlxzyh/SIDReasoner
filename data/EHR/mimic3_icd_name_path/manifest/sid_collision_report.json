@@ -1,0 +1,26 @@
+{
+  "collision_disease_count": 4,
+  "collision_groups": [
+    {
+      "disease_ids": [
+        "ICD9CM:9980",
+        "ICD9CM:99809"
+      ],
+      "sid": "<a_68><b_128><c_0>"
+    },
+    {
+      "disease_ids": [
+        "ICD9CM:9973",
+        "ICD9CM:99739"
+      ],
+      "sid": "<a_68><b_128><c_3>"
+    }
+  ],
+  "collision_rate": 0.00044533511467379205,
+  "disease_count": 4491,
+  "initial_collision_rate": 0.08884435537742151,
+  "initial_unique_sid_count": 4092,
+  "max_collision_group_size": 2,
+  "repair_rounds": 20,
+  "unique_sid_count": 4489
+}
