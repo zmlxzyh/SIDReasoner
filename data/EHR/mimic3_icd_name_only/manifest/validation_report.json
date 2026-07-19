@@ -1,0 +1,33 @@
+{
+  "code_level_counts": {
+    "test": 26161,
+    "train": 93616,
+    "valid": 12448
+  },
+  "code_level_reaggregation_valid": true,
+  "collision_disease_count": 10,
+  "collision_group_count": 5,
+  "disease_count": 4491,
+  "disease_manifest_mapping_valid": true,
+  "embedding_dtype": "float32",
+  "embedding_shape": [
+    4491,
+    4096
+  ],
+  "manifest_hashes_valid": true,
+  "maximum_embedding_norm": 1.0000001192092896,
+  "minimum_embedding_norm": 0.9999998807907104,
+  "patient_or_visit_identity_fields_found": false,
+  "require_unique_sid": false,
+  "unique_sid_count": 4486,
+  "used_sid_token_count": 758,
+  "valid": true,
+  "visit_counts": {
+    "test": 1714,
+    "train": 6141,
+    "valid": 837
+  },
+  "warnings": [
+    "full SID collisions remain; see sid_collision_report.json"
+  ]
+}

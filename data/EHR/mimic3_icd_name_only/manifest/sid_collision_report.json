@@ -1,0 +1,47 @@
+{
+  "collision_disease_count": 10,
+  "collision_groups": [
+    {
+      "disease_ids": [
+        "ICD9CM:2794",
+        "ICD9CM:27949"
+      ],
+      "sid": "<a_0><b_34><c_0>"
+    },
+    {
+      "disease_ids": [
+        "ICD9CM:V138",
+        "ICD9CM:V1389"
+      ],
+      "sid": "<a_8><b_180><c_0>"
+    },
+    {
+      "disease_ids": [
+        "ICD9CM:7955",
+        "ICD9CM:79551"
+      ],
+      "sid": "<a_29><b_28><c_0>"
+    },
+    {
+      "disease_ids": [
+        "ICD9CM:2848",
+        "ICD9CM:28489"
+      ],
+      "sid": "<a_86><b_218><c_0>"
+    },
+    {
+      "disease_ids": [
+        "ICD9CM:7845",
+        "ICD9CM:78459"
+      ],
+      "sid": "<a_195><b_156><c_0>"
+    }
+  ],
+  "collision_rate": 0.00111333778668448,
+  "disease_count": 4491,
+  "initial_collision_rate": 0.06034290803829882,
+  "initial_unique_sid_count": 4220,
+  "max_collision_group_size": 2,
+  "repair_rounds": 20,
+  "unique_sid_count": 4486
+}

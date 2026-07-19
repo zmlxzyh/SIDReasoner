@@ -1,0 +1,67 @@
+{
+  "code_level_counts": {
+    "test": 26161,
+    "train": 93616,
+    "valid": 12448
+  },
+  "dataset": "mimic3",
+  "disease_vocabulary_count": 4491,
+  "duplicate_target_count": 0,
+  "embedding_text_fields": [
+    "title"
+  ],
+  "embedding_text_template": "{title}",
+  "history_disease_count": 3954,
+  "history_field": "cond_hist[:-1]",
+  "identity_fields_written": false,
+  "metadata_coverage": 1.0,
+  "ontology": {
+    "cycle_count": 0,
+    "maximum_path_depth": 7,
+    "minimum_path_depth": 3,
+    "missing_parent_count": 0,
+    "node_count": 17736,
+    "root_count": 3
+  },
+  "patient_counts": {
+    "test": 1091,
+    "train": 3814,
+    "valid": 544
+  },
+  "patient_leakage_count": 0,
+  "source_files": {
+    "dataset": {
+      "file": "mimic3_box_dataset_1.pkl",
+      "sha256": "d210585724605ffb7bbfb4a3537ffa84e9a2fb44cc0bd00c3564b4fbf3f42ee1"
+    },
+    "icd_metadata": {
+      "file": "icd9_icd10_combined.csv",
+      "sha256": "f01a3ae1bdb79713271df173bb873ee32af94f2b4d1b12f6c84ca1c1ee636a47"
+    },
+    "icd_ontology": {
+      "file": "diagnosis_icd9_ontology.csv",
+      "sha256": "7c620301cc56faeb603da1a84cdc0fb3b6ec5cbbff939016abc317a60210ae72"
+    },
+    "test_indices": {
+      "file": "testset.pt",
+      "sha256": "e5fb830639b02e66cadf49c7314708aaaa6da674737ee1dac24b143e25c0cf30"
+    },
+    "train_indices": {
+      "file": "trainset.pt",
+      "sha256": "f5301231308381bcaea1dfde1605dea5e5a90cfaa74d9345543af8558aae1ad0"
+    },
+    "valid_indices": {
+      "file": "validset.pt",
+      "sha256": "d6ed386db86c82502b2e9168b6f48d277bfb380bcac49eb6456673d8f31046f9"
+    }
+  },
+  "target_disease_count": 3710,
+  "target_field": "icd9_code",
+  "target_system": "ICD9CM",
+  "transductive_vocabulary": true,
+  "visit_counts": {
+    "test": 1714,
+    "train": 6141,
+    "valid": 837
+  }
+}

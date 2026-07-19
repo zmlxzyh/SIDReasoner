@@ -1,0 +1,73 @@
+{
+  "checkpoint": "rq/checkpoints/seed_2024/best_loss_model.pth",
+  "checkpoint_sha256": "26719be8a7be45d1623b4a74ff9e91a14cf0f81e30564642e32e31ee05634e29",
+  "codebook_usage": [
+    {
+      "layer": "a",
+      "size": 256,
+      "usage_rate": 1.0,
+      "used": 256
+    },
+    {
+      "layer": "b",
+      "size": 256,
+      "usage_rate": 0.98828125,
+      "used": 253
+    },
+    {
+      "layer": "c",
+      "size": 256,
+      "usage_rate": 0.97265625,
+      "used": 249
+    }
+  ],
+  "embedding_sha256": "922205a6f9cd7a0bde7d5c867e279af40f383241f99f933c4670affdeda352ee",
+  "final_collision_rate": 0.00111333778668448,
+  "index_file": "index/mimic3_icd.index.json",
+  "index_sha256": "c893e59f8803d7cc8173ff66ea21655d8d19803c8daefa9c1bca423c4ab0c2ac",
+  "initial_collision_rate": 0.06034290803829882,
+  "maximum_repair_rounds": 20,
+  "model_config": {
+    "beta": 0.25,
+    "bn": false,
+    "dropout_prob": 0.0,
+    "e_dim": 32,
+    "in_dim": 4096,
+    "kmeans_init": true,
+    "kmeans_iters": 100,
+    "layers": [
+      2048,
+      1024,
+      512,
+      256,
+      128,
+      64
+    ],
+    "loss_type": "mse",
+    "num_emb_list": [
+      256,
+      256,
+      256
+    ],
+    "quant_loss_weight": 1.0,
+    "sk_epsilons": [
+      0.003,
+      0.003,
+      0.003
+    ],
+    "sk_iters": 50
+  },
+  "repair_epsilon": 0.003,
+  "repair_rounds": 20,
+  "seed": 2024,
+  "training_config": {
+    "batch_size": 8192,
+    "epochs": 3000,
+    "eval_step": 50,
+    "learning_rate": 0.001,
+    "optimizer": "AdamW",
+    "selection_metric": "loss",
+    "warmup_epochs": 50,
+    "weight_decay": 0.0
+  }
+}

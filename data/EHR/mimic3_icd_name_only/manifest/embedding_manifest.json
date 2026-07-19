@@ -1,0 +1,32 @@
+{
+  "dimension": 4096,
+  "disease_order_file": "embeddings/mimic3_icd.embedding_texts.jsonl",
+  "disease_order_sha256": "2f90067e65b439045f28bae3ef06ff7b1c660de4f4caf35925262f465082e3fe",
+  "embedding_file": "embeddings/mimic3_icd.emb-qwen3-embedding-8b.npy",
+  "embedding_sha256": "922205a6f9cd7a0bde7d5c867e279af40f383241f99f933c4670affdeda352ee",
+  "embedding_text_fields": [
+    "title"
+  ],
+  "embedding_text_template": "{title}",
+  "inference_dtype": "bfloat16",
+  "max_length": 256,
+  "maximum_row_l2_norm": 1.0000001192092896,
+  "minimum_row_l2_norm": 0.9999998807907104,
+  "model_config_sha256": "dcccf7c7890c8debc4af8dace8d6acd8dd50bd56d50d4d8b60529381ba3de3d7",
+  "model_expected_shards": 4,
+  "model_id": "Qwen/Qwen3-Embedding-8B",
+  "model_snapshot_complete": true,
+  "model_source": "modelscope-cache",
+  "model_weight_index_sha256": "ceaf1429bfa18eecc75d079737e8d1fe8dc0627f5ec7e6a985514626d1ac6a77",
+  "normalization": "L2",
+  "padding_side": "left",
+  "pooling": "last_non_padding_token",
+  "query_instruction": null,
+  "requested_revision": null,
+  "resolved_revision": "master",
+  "saved_dtype": "float32",
+  "shape": [
+    4491,
+    4096
+  ]
+}
