@@ -15,8 +15,11 @@ logs/*
 *.pyc
 
 data_backup/*
-data/*
-rq/*
+
+*.csv
+
+rq/
+
 
 .DS_Store
 **/.DS_Store
