@@ -1,7 +1,8 @@
 # 生成式 EHR 预测：Simple SFT 方案
 
-> 更新日期：2026-07-18  
+> 更新日期：2026-07-21（并入 [`2026-07-21-sft-solution.md`](./2026-07-21-sft-solution.md) 的 11 条决策）
 > 本文描述不使用富语料、不生成 reasoning、也不进行 RL 的生成式 EHR 最小完整闭环。  
+> 具体问题的决策与理由见 [`2026-07-21-sft-solution.md`](./2026-07-21-sft-solution.md)；本文正文已按该决策更新。
 > 代码以 SIDReasoner 的 Stage 1 为主体，保留 Case 1–6 的基础 SID 对齐与预测任务，删除富语料和推理任务；评测阶段使用合法 SID 约束的 beam search 生成疾病 rank-list，并计算 Recall@K 和 weighted-F1。
 
 ## 1. 方案范围
@@ -101,16 +102,16 @@ MIMIC-III / MIMIC-IV pkl + 原始 split
 
 Simple SFT 不负责从原始 MIMIC 表重新构造患者记录，也不负责训练 RQ-VAE/RQ-KMeans。开始本阶段前，应该已经获得以下稳定产物。
 
-推荐目录：
+实际目录（以 `mimic3_icd_name_path_0.1` 为准；决策见 solution 文档问题 9）：
 
 ```text
-SIDReasoner/data/EHR/mimic3_icd/
+SIDReasoner/data/EHR/mimic3_icd_name_path_0.1/     # <data_dir>：唯一需要切换的顶层版本目录
 ├── manifest/
 │   ├── disease_manifest.json
 │   ├── preprocessing_manifest.json
-│   └── tokenizer_validation.json
+│   └── validation_report.json                     # 数据自检报告（非 tokenizer 校验）
 ├── index/
-│   ├── mimic3_icd.item.json
+│   ├── mimic3_icd.item.json                       # 内部文件前缀固定 mimic3_icd（不含 _name_path_0.1）
 │   └── mimic3_icd.index.json
 ├── info/
 │   └── mimic3_icd.info.tsv
@@ -124,7 +125,7 @@ SIDReasoner/data/EHR/mimic3_icd/
     └── test.jsonl
 ```
 
-MIMIC-IV 使用相同结构，例如 `mimic4_icd/`。第一轮实验建议分别训练 MIMIC-III 和 MIMIC-IV，不要直接混合两套数据。
+不同规模版本（如全量 `mimic3_icd_name_path`）**内部结构与文件命名完全一致，仅规模不同**：切换只改顶层 `data_dir`，其余路径全部派生（`{data_dir}/index/{prefix}.index.json` 等），`prefix` 默认 `mimic3_icd`。MIMIC-IV 使用相同结构、`prefix` 改为 `mimic4_icd`；第一轮实验建议分别训练 MIMIC-III 和 MIMIC-IV，不要直接混合。`tokenizer` 相关校验不在此目录，改为训练启动 preflight（见 §12.2）。
 
 ### 3.1 数据验收条件
 
@@ -221,12 +222,18 @@ disease_to_sid = {
     disease_id: "".join(tokens)
     for disease_id, tokens in disease_to_sid_tokens.items()
 }
-sid_to_disease = {
-    sid: disease_id for disease_id, sid in disease_to_sid.items()
-}
+# 决策（solution 问题 1）：接受少量完整 SID 碰撞，不因此中断。
+# 按 disease_id 排序确定化覆盖，保证每次运行“保留者/丢弃者”一致、可复现。
+sid_to_disease = {}
+for disease_id in sorted(disease_to_sid):
+    sid_to_disease[disease_to_sid[disease_id]] = disease_id
 
-assert len(disease_to_sid) == len(sid_to_disease), "full SID collision"
+n_collision = len(disease_to_sid) - len(sid_to_disease)
+if n_collision:
+    print(f"[warn] full SID collision: {n_collision} disease(s) unrecoverable in eval")
 ```
+
+> 第一版接受完整 SID 碰撞（实测 0.1 为 2 组 / 4 病）与 title 重复（14 组 / 28 病），不去碰撞、不改 `item.json`；理由与护栏见 solution 文档问题 1。这里**不再硬 assert 唯一**，改为确定化覆盖 + 告警，并在 `evaluation_manifest.json` 记录不可恢复的 GT 记录数。
 
 ### 5.1 SID 覆盖与碰撞检查
 
@@ -235,8 +242,11 @@ def validate_sid_index(item_meta, sid_index, expected_disease_ids):
     assert set(item_meta) == set(sid_index)
     assert set(sid_index) == set(expected_disease_ids)
 
+    # 完整 SID 唯一性：第一版接受碰撞，仅告警计数，不 assert（solution 问题 1）
     full_sids = ["".join(tokens) for tokens in sid_index.values()]
-    assert len(full_sids) == len(set(full_sids))
+    n_collision = len(full_sids) - len(set(full_sids))
+    if n_collision:
+        print(f"[warn] {n_collision} full-SID collision(s) accepted")
 
     layer_count = {len(tokens) for tokens in sid_index.values()}
     assert len(layer_count) == 1
@@ -245,7 +255,7 @@ def validate_sid_index(item_meta, sid_index, expected_disease_ids):
         assert all(token.startswith("<") and token.endswith(">") for token in tokens)
 ```
 
-RQ-SID 的层级是量化路径，不应默认解释为 ICD 本体层级。Simple SFT 只要求完整 SID 唯一，不使用 SID 前缀作为医学相似度或 reward。
+RQ-SID 的层级是量化路径，不应默认解释为 ICD 本体层级。第一版**接受少量完整 SID 碰撞**（不用作医学相似度或 reward）。
 
 ## 6. 合法 SID 列表：`*.info.tsv`
 
@@ -361,6 +371,8 @@ mimic3:train:000001,train,ICD9CM:4280,"Congestive heart failure, unspecified",<a
 
 ### 8.3 兼容字段与权威字段
 
+措辞（决策见 solution 问题 11）：EHR code-level CSV **不是**与 Amazon 完全相同的 schema，而是**保留原版五个 Dataset 所需全部消费字段的兼容超集（consumer-compatible superset）**——差异点为 `sample_id + split`（而非 `user_id`）、列表用合法 JSON（而非 Python repr）、并额外含 `history_*_visits` / `ground_truth_*` / `target_index` 等 visit-level 权威字段；无需额外复制 `user_id`。
+
 Amazon 兼容字段中的历史通常是扁平列表，会丢失 visit 边界。医疗实现应遵循：
 
 - `history_*_visits` 是权威字段。
@@ -391,7 +403,7 @@ Visit 2: Coronary atherosclerosis of native coronary artery
 统一规则：
 
 1. visit 之间严格保持时间顺序。
-2. 训练阶段每次取样动态打乱同一 visit 内的疾病顺序，减少对任意 ICD 排序的过拟合。
+2. 训练阶段在样本物化时对每条样本各做**一次** visit 内打乱（逐样本确定化种子），之后固定为静态数据，减少对任意 ICD 排序的过拟合；不做每 epoch 重新打乱（决策见 solution 问题 2）。由于同一 visit 历史会因多个目标疾病出现在多行、逐行独立打乱，单个 epoch 内模型已见到同一历史的多种顺序。
 3. valid/test 使用确定性排序，例如按 `disease_id` 排序。
 4. 超长样本从最旧 visit 开始整段删除，优先保留近期历史。
 5. 不允许从一个 SID 中间截断，也不允许留下不闭合的 visit 边界。
@@ -410,26 +422,26 @@ serialize_text_history(history_text_visits, training: bool, seed: int) -> str
 
 以下 prompt 是医疗版建议模板。具体措辞可以调整，但同一任务的 train/valid 必须一致。
 
-### 10.1 T1：疾病文本 → SID
+### 10.1 T1：疾病名称 → SID
 
 ```text
 System:
-You map ICD disease descriptions to semantic identifiers.
+You map ICD disease names to semantic identifiers.
 
 User:
-Which disease has the description "Congestive heart failure, unspecified"?
+Which disease has the name "Congestive heart failure, unspecified"?
 
 Assistant:
 <a_17><b_93><c_4>
 ```
 
-来源：`item.json + index.json`。每个疾病一条。
+来源：`item.json`（取 `title` 作为 name，**不拼 ICD code**）`+ index.json`。每个疾病一条。措辞改用 “name”（决策见 solution 问题 5）；14 组重复 title 造成的“同名两 SID”歧义按问题 1 接受不处理。
 
-### 10.2 T2：SID → 疾病文本
+### 10.2 T2：SID → 疾病名称
 
 ```text
 System:
-You map semantic identifiers to ICD disease descriptions.
+You map semantic identifiers to ICD disease names.
 
 User:
 What disease does <a_17><b_93><c_4> represent?
@@ -531,11 +543,14 @@ SIDReasoner/ehr_data_Qwen3.py
 - assistant-only label masking；
 - `input_ids / attention_mask / labels` 返回协议。
 
-必须修改的地方：
+必须修改的地方（决策见 solution 问题 6）：
 
 - 用 `json.loads` 替换 `eval`。
-- 从嵌套 visit 字段构造历史。
-- 截断完整 visit，而不是简单做 `input_ids[-max_len:]`。
+- 从嵌套权威字段（`history_sid_visits` / `history_disease_text_visits`）构造历史，**不用**扁平 `history_item_*`；经统一 serializer 生成 prompt。
+- **visit 级截断**：超长时整段删除最旧 visit，绝不切断 SID、不留不闭合 visit 边界；不再用 `input_ids[-max_len:]`。
+- 训练集在 `pre()` 内做**一次性** visit 内打乱（问题 2，逐样本确定化种子）；valid/test 按 `disease_id` 确定排序。
+- **全任务禁用 dedup**（问题 3）：EHR 慢病复发是合法目标，不移植原类“target==末位历史即丢弃”的逻辑，不启用 `dedup=True`。
+- T1/T2 用 `title` 作为 name 输入，不拼 ICD code（问题 5）。
 - 在 `EhrVisitEvalDataset` 中返回完整 `ground_truth_sids`，而不是单个 `item_sid`。
 - 评测数据一 visit 一行，不读取 code-level 重复行。
 
@@ -590,7 +605,7 @@ RL_training_script.sh
 
 ### 12.2 词表扩展
 
-从 `disease.index.json` 收集所有分层 SID token，再加 visit token：
+从 `mimic3_icd.index.json` 收集所有分层 SID token，再加 visit token：
 
 ```python
 sid_tokens = sorted({
@@ -608,12 +623,23 @@ tokenizer.add_tokens(tokens_to_add)
 model.resize_token_embeddings(len(tokenizer))
 ```
 
-保存 tokenizer 后必须重新加载并检查：
+保存 tokenizer 后必须重新加载并检查（作为**训练启动 preflight artifact**，决策见 solution 问题 8）：
 
 ```python
-for token in special_tokens:
-    assert len(tokenizer.encode(token, add_special_tokens=False)) == 1
+tokenizer.save_pretrained(out_dir)
+tk = AutoTokenizer.from_pretrained(out_dir)
+for token in special_tokens:                       # 768 SID + 2 visit = 770 个
+    assert len(tk.encode(token, add_special_tokens=False)) == 1
 ```
+
+preflight 在扩词表 + `resize_token_embeddings` 之后、`trainer.train()` 之前运行，四项检查任一不过即**报错终止**，结果落盘 `manifest/tokenizer_preflight.json`：
+
+1. 768 个 SID token 和两个 visit token 均为单 token。
+2. label 只覆盖 assistant response 本身（`mask_eos=True`），**不监督** assistant 结束后缀。
+3. `mask_eos=True` 后，answer 之后的 chat template 结束后缀（如 `<|im_end|>`、EOS）确实**全部为 `-100`**，既没有被监督、也不含下一轮模板内容。
+4. 保存并重载 tokenizer 后结果不变。
+
+其中 2/3 用一条样本 decode 可视化确认：labels 中非 `-100` 段解码后正好是回答本身（**不含**结束符），其后的结束后缀全部为 `-100`。
 
 第一版建议像 SIDReasoner 一样进行全参数 SFT，而不是只训练新增 token embedding。SID 历史预测不仅需要学习新 token，还需要 attention 和 FFN 适应纵向 EHR 序列模式。
 
@@ -621,17 +647,22 @@ for token in special_tokens:
 
 - 所有任务只对 assistant response 计算交叉熵。
 - system/user prompt 的 label 全部为 `-100`。
-- T1/T3/T4/T5/T6 的目标都应包含 EOS，教会模型在一个疾病名称或完整 SID 后停止。
+- **T1–T6 统一 `mask_eos=True`（沿用原始 codebase 默认），不监督 assistant 结束后缀（结束标记 / EOS）**；即目标只覆盖疾病名称或完整 SID 本身，回答之后的 chat template 后缀不参与 loss。
 - 不允许将 ground-truth 完整集合放进 system/user prompt。
 - valid/test 不做 visit 内随机打乱。
 
-当前 `data_Qwen3.py` 的 `mask_assistant_response_only` 默认 `mask_eos=True`，该分支只保留 response 本身并遮掉 chat template 后缀。医疗版若要把回答后的结束符纳入监督，应显式使用 `mask_eos=False`，并通过 decode/label 可视化确认保留下来的后缀确实只是 assistant 结束标记，而没有下一轮模板内容。
+当前 `data_Qwen3.py` 的 `mask_assistant_response_only` 默认 `mask_eos=True`，该分支只保留 response 本身并遮掉 chat template 后缀。**Simple SFT 直接沿用这一默认**（`ehr_data_Qwen3.py` 的 `_encode_ehr_sample` 固定 `mask_eos=True`），保持与原 SIDReasoner 一致、便于对齐复现。
+
+由此带来的权衡（明确接受）：模型不会通过监督学到“在答案后主动输出 EOS 停止”。这对本版本可接受，因为——
+
+- **T5（主任务、唯一评测任务）** 通过受约束 beam search + SID trie 在完整 SID 后强制 EOS（§13.3），不依赖模型自行学会停止；
+- **T1–T4/T6** 的自由文本输出在 Simple SFT 阶段不进入 beam 评测，只作辅助 loss，不需要精确的停止行为。
+
+后续若接入富语料 / reasoning（需要模型自主生成并停止），再对相应任务显式改用 `mask_eos=False`（参考 `ReasoningActivationDataset` 已用 `mask_eos=False`），不影响本版本决策。
 
 ### 12.4 多任务采样
 
-最小复现可以直接按照 SIDReasoner 使用 `ConcatDataset`，让数据集自然大小决定占比。但 EHR code-level 数据远大于疾病翻译数据，且 MIMIC-IV 展开后超过 300 万行，简单物化六份数据会产生明显内存和训练成本问题。
-
-推荐将任务比例做成配置，第一版可从以下比例开始：
+**第一版决策（solution 问题 4）**：这是小流量测试，以跑通代码为主，直接用 `ConcatDataset` 让数据集自然大小决定占比，**不做**加权采样 / 行复制。注意：0.1 保留全量 item 但 code-level 只有约 10%，自然比例下 T1/T2 占比偏大（各约 11%），因此 0.1 训练曲线只验证代码正确、不能外推全量。下表的显式比例**推迟到正式实验**再引入（届时 EHR code-level 远大于翻译数据、MIMIC-IV 展开超 300 万行，需惰性读取或在线采样，不宜物化多份 list）：
 
 | 任务 | 初始采样比例 |
 |---|---:|
@@ -656,11 +687,12 @@ for token in special_tokens:
 
 继续使用 `MultiEvalTrainer`：
 
-- 主验证集：T5 `SID history → SID`。
-- 额外验证集：T1 `text → SID`。
-- 额外验证集：T2 `SID → text`。
+- 主验证集（held-out）：T5 `SID history → SID`，读 code-level valid（验证集病人）。
+- 额外监控集：T1 `name → SID`、T2 `SID → name`。
 
-训练中的 early stopping 可以先按 T5 `eval_loss`；正式实验的最佳 checkpoint 应额外运行 valid visit-level beam search，并按 `Recall@10` 或预先确定的主指标选择，避免 token-level loss 与集合排序能力不一致。
+注意（决策见 solution 问题 7）：T1/T2 额外集读的是**与训练同一份** `item.json`/`index.json`，是**映射重建/记忆**，非泛化验证；因此其 metric key 命名为 `alignment_reconstruction/title2sid_loss` 与 `alignment_reconstruction/sid2title_loss`，**不参与** early stopping / checkpoint 选择（`MultiEvalTrainer` 评测额外集时已临时禁用 EarlyStoppingCallback）。
+
+early stopping / 选最优 checkpoint **只看 T5 held-out `eval_loss`**；正式实验的最佳 checkpoint 应额外运行 valid visit-level beam search，按 `Recall@10` 或预先确定的主指标选择，避免 token-level loss 与集合排序能力不一致。
 
 ### 12.6 初始训练配置
 
@@ -684,7 +716,7 @@ early stopping patience     3
 - loss 能快速下降；
 - T1/T2 能互相映射；
 - T5 能输出完整 SID；
-- SID 后能正常 EOS；
+- decode labels 后监督段正好是回答本身、其后的结束后缀（EOS）为 `-100`（`mask_eos=True`，不监督结束符）；评测端由 trie 在完整 SID 后强制 EOS，不依赖模型自行停止；
 - decode 后没有把 prompt 纳入 labels。
 
 ## 13. Simple SFT 推理
@@ -750,7 +782,7 @@ root
 4. trie 从 `index.json` 动态构建，不硬编码三层；即使第一版为三层，代码也读取实际层数。
 5. tokenizer 或 checkpoint 更换后重新构建并测试。
 
-可复用 `evaluate_Qwen3.py` 的 `prefix_allowed_tokens_fn` 思路，但建议将当前基于 hash 和固定 `prefix_index` 的实现改为显式 token trie。
+**第一版决策（solution 问题 10）**：受约束 beam 的 `prefix_allowed_tokens_fn` / trie 与 no-think 处理**直接沿用 `evaluate_Qwen3.py` 原始代码**，先不改。原实现基于 hash + 固定 `prefix_index` 且按 3 层硬编码（EHR 恰为 3 层可用），改为显式 token trie 留作后续；若评测出现非法 SID 比例异常或候选不足 40，再回来处理。
 
 ### 13.4 beam search 生成 rank-list
 
@@ -758,9 +790,9 @@ root
 
 ```text
 do_sample               false
-num_beams               40 或更大
-num_return_sequences    与 num_beams 相同
-length_penalty          0.0 或 1.0；SID 等长时影响很小
+num_beams               40
+num_return_sequences    40   # = num_beams（决策见 solution 问题 10）
+length_penalty          0.0
 early_stopping          true
 output_scores           true
 return_dict_in_generate true
